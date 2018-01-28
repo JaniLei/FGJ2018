@@ -14,6 +14,7 @@ public class PlayerControls : MonoBehaviour
     float currentSpeed;
     int vDirection;
     bool poweringUp;
+    bool fast;
 
 	void Start ()
     {
@@ -30,11 +31,30 @@ public class PlayerControls : MonoBehaviour
     {
         if (poweringUp)
         {
-            if (energy < maxEnergy)
-                ChangeEnergyValue(1);
-            else
+            if (energySlider.value == energy)
+            {
                 poweringUp = false;
+                currentSpeed = speed;
+            }
         }
+        
+
+        if (Input.GetKeyDown(KeyCode.LeftShift))
+        {
+            fast = true;
+            currentSpeed *= 2;
+        }
+        if (Input.GetKeyUp(KeyCode.LeftShift))
+        {
+            fast = false;
+            currentSpeed /= 2;
+        }
+
+        if (fast && energy > 0)
+            energy -= 1;
+
+        if (energySlider.value != energy)
+            UpdateEnergyUI();
     }
 
     void FixedUpdate()
@@ -58,6 +78,7 @@ public class PlayerControls : MonoBehaviour
                 vDirection = (int)(vInput / Mathf.Abs(vInput));
             }
         }
+
         /*if (Mathf.Abs(transform.rotation.z ) > 10)
         {
             float clampedZ = Mathf.Clamp(transform.rotation.z, -10, 10);
@@ -78,12 +99,19 @@ public class PlayerControls : MonoBehaviour
 
             if (hit.transform.gameObject.tag == "Door")
             {
-                Destroy(hit.transform.gameObject);
-                ChangeEnergyValue(-10);
+                Door hitDoor = hit.transform.GetComponent<Door>();
+                if (hitDoor)
+                {
+                    hitDoor.activated = true;
+                    //energy -= 10;
+                    ChangeEnergyValue(-10);
+                }
+                //Destroy(hit.transform.gameObject);
             }
             if (hit.transform.gameObject.tag == "PowerStation")
             {
                 poweringUp = true;
+                energy = maxEnergy;
             }
         }
     }
@@ -91,8 +119,15 @@ public class PlayerControls : MonoBehaviour
     void ChangeEnergyValue(int amount)
     {
         energy += amount;
-        energySlider.value = energy;
         currentSpeed = speed * (energy / maxEnergy);
+    }
+
+    void UpdateEnergyUI()
+    {
+        if (energySlider.value > energy)
+            energySlider.value--;
+        else if (energySlider.value < energy)
+            energySlider.value++;
     }
 
     void OnTriggerEnter2D(Collider2D other)
@@ -102,10 +137,12 @@ public class PlayerControls : MonoBehaviour
         {
             Debug.Log("overlap elevator");
             testElevator.activated = true;
+            //energy -= 10;
             ChangeEnergyValue(-10);
         }
-        if (other.tag == "Battery")
+        if (other.tag == "Battery" && energy != maxEnergy)
         {
+            //energy += 20;
             ChangeEnergyValue(20);
             Destroy(other.gameObject);
         }
