@@ -8,17 +8,23 @@ public class PlayerControls : MonoBehaviour
 {
     public float speed;
     public Slider energySlider;
+    public Image img1, img2, img3, bg;
+    public GameObject spr;
+
 
     Rigidbody2D rb;
+    Animator anim;
     float energy, maxEnergy;
     float currentSpeed;
     int vDirection;
     bool poweringUp;
     bool fast;
+    PowerStation hitStation;
 
 	void Start ()
     {
         rb = GetComponent<Rigidbody2D>();
+        anim = GetComponentInChildren<Animator>();
         maxEnergy = 100;
         energy = maxEnergy;
         energySlider.maxValue = maxEnergy;
@@ -34,7 +40,7 @@ public class PlayerControls : MonoBehaviour
             if (energySlider.value == energy)
             {
                 poweringUp = false;
-                currentSpeed = speed;
+                currentSpeed = 0;
             }
         }
         
@@ -55,6 +61,11 @@ public class PlayerControls : MonoBehaviour
 
         if (energySlider.value != energy)
             UpdateEnergyUI();
+
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            Application.Quit();
+        }
     }
 
     void FixedUpdate()
@@ -70,12 +81,29 @@ public class PlayerControls : MonoBehaviour
             }
             if (Input.GetKeyDown(KeyCode.E))
             {
+                if (img1.gameObject.activeInHierarchy)
+                {
+                    img1.gameObject.SetActive(false);
+                    bg.gameObject.SetActive(false);
+                    //img2.gameObject.SetActive(true);
+                }
+                else if (img2.gameObject.activeInHierarchy)
+                {
+                    img2.gameObject.SetActive(false);
+                    img3.gameObject.SetActive(true);
+                }
+                else if (img3.gameObject.activeInHierarchy)
+                {
+                    Application.LoadLevel(Application.loadedLevel);
+                }
+                //anim.Play("robo_arm_anim");
                 RayCastRight();
             }
             float vInput = Input.GetAxisRaw("Horizontal");
             if (vInput != 0)
             {
                 vDirection = (int)(vInput / Mathf.Abs(vInput));
+                spr.transform.localScale = new Vector3(vDirection, 1, 1);
             }
         }
 
@@ -90,7 +118,7 @@ public class PlayerControls : MonoBehaviour
 
     void RayCastRight()
     {
-        RaycastHit2D hit = Physics2D.Raycast(transform.position + (Vector3.right * vDirection), Vector2.right * vDirection, 1);
+        RaycastHit2D hit = Physics2D.Raycast(transform.position + ((Vector3.right * vDirection)/2), Vector2.right * vDirection, 1);
 
         if (hit.collider)
         {
@@ -110,8 +138,14 @@ public class PlayerControls : MonoBehaviour
             }
             if (hit.transform.gameObject.tag == "PowerStation")
             {
-                poweringUp = true;
-                energy = maxEnergy;
+                hitStation = hit.transform.GetComponent<PowerStation>();
+                if (hitStation)
+                {
+                    if (!hitStation.active)
+                    {
+                        StartCoroutine(ActivatePowerStation());
+                    }
+                }
             }
         }
     }
@@ -146,5 +180,27 @@ public class PlayerControls : MonoBehaviour
             ChangeEnergyValue(20);
             Destroy(other.gameObject);
         }
+    }
+    
+    IEnumerator ActivatePowerStation()
+    {
+        anim.SetTrigger("Arm");
+        yield return new WaitForSeconds(.5f);
+
+        poweringUp = true;
+        energy = 0;
+        hitStation.DeActivate();
+        hitStation.GetComponent<BoxCollider2D>().enabled = false;
+        hitStation = null;
+        
+        StartCoroutine(EndGame());
+    }
+
+    IEnumerator EndGame()
+    {
+        yield return new WaitForSeconds(3);
+
+        bg.gameObject.SetActive(true);
+        img2.gameObject.SetActive(true);
     }
 }

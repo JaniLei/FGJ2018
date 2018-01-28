@@ -13,7 +13,7 @@ public class Door : MonoBehaviour
     void Start ()
     {
         startPos = transform.position;
-        range = 10;
+        range = 4;
     }
 	
 	void Update ()
